@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>韓麻スコア 🀄</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background:#f0f2f5; font-family: -apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif; }
+    #app { max-width:480px; margin:0 auto; min-height:100vh; position:relative; }
+
+    /* ヘッダーグラデーション */
+    .hd { background:linear-gradient(135deg,#1a7a4a,#2d9e67); }
+
+    /* スコア色 */
+    .sp { color:#16a34a; }
+    .sn { color:#dc2626; }
+    .sz { color:#9ca3af; }
+
+    /* カード */
+    .card { background:white; border-radius:12px; margin:10px 12px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+
+    /* ランキングバッジ */
+    .rk-badge {
+      width:28px; height:28px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:13px; font-weight:700;
+    }
+    .rk-1 { background:#f59e0b; color:white; }
+    .rk-2 { background:#9ca3af; color:white; }
+    .rk-3 { background:#cd7c2f; color:white; }
+    .rk-n { background:#f3f4f6; color:#6b7280; }
+
+    /* タグ */
+    .tag { display:inline-block; font-size:11px; font-weight:600; padding:2px 7px; border-radius:5px; }
+    .tag-ron    { background:#fee2e2; color:#dc2626; }
+    .tag-tsumo  { background:#dcfce7; color:#16a34a; }
+    .tag-riichi { background:#fef3c7; color:#d97706; }
+    .tag-ryu    { background:#f3f4f6; color:#6b7280; }
+
+    /* ボトムナビ */
+    .bnav {
+      position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+      width:100%; max-width:480px; background:white;
+      border-top:1px solid #e5e7eb;
+      display:grid; grid-template-columns:repeat(5,1fr);
+      z-index:50; padding-bottom:env(safe-area-inset-bottom);
+    }
+    .bnav-btn {
+      display:flex; flex-direction:column; align-items:center;
+      padding:8px 4px; cursor:pointer; color:#9ca3af;
+      font-size:11px; gap:2px; border:none; background:none;
+      transition:color .15s;
+    }
+    .bnav-btn.active { color:#16a34a; }
+    .bnav-icon { font-size:20px; line-height:1; }
+
+    /* ビュー */
+    .view { display:none; padding-bottom:80px; }
+    .view.active { display:block; }
+
+    /* スピナー */
+    .spin { animation:spin .8s linear infinite; display:inline-block; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* 統計テーブル */
+    .stat-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f5f5f5; font-size:13px; }
+    .stat-label { color:#6b7280; }
+    .stat-val { font-weight:600; color:#1f2937; }
+
+    /* セクション区切り */
+    .sec-title { font-weight:700; color:#1f2937; margin-bottom:10px; font-size:15px; }
+
+    /* セッションカード展開ボタン */
+    details > summary { list-style:none; cursor:pointer; }
+    details > summary::-webkit-details-marker { display:none; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ローディング画面 -->
+  <div id="v-loading" class="view active">
+    <div class="hd text-white px-5 py-4">
+      <div class="text-xl font-black tracking-tight">韓麻スコア 🀄</div>
+    </div>
+    <div class="flex flex-col items-center justify-center h-72 gap-4 text-gray-500">
+      <div class="spin text-5xl">🀄</div>
+      <div>スプレッドシートからデータを取得中…</div>
+    </div>
+  </div>
+
+  <!-- 初回設定画面 -->
+  <div id="v-setup" class="view">
+    <div class="hd text-white px-5 py-6">
+      <div class="text-2xl font-black">韓麻スコア 🀄</div>
+      <div class="text-sm mt-1 opacity-80">水曜会スコア管理</div>
+    </div>
+    <div class="card mt-3">
+      <div class="sec-title">📋 接続設定</div>
+      <p class="text-sm text-gray-600 mb-4 leading-relaxed">
+        Googleスプレッドシートのデータを読み込むために、<strong>Apps Script ウェブアプリ</strong>のURLを設定してください。
+      </p>
+
+      <div class="bg-blue-50 rounded-xl p-4 mb-5 text-sm text-blue-900">
+        <div class="font-bold mb-2">⚙️ 設定手順</div>
+        <ol class="list-decimal ml-4 space-y-1.5 leading-relaxed">
+          <li>スプレッドシートを開く → 拡張機能 → <strong>Apps Script</strong></li>
+          <li>restructure.gsの最新コードを貼り付けて保存</li>
+          <li>「デプロイ」→「新しいデプロイ」</li>
+          <li>種類: <strong>ウェブアプリ</strong></li>
+          <li>実行者: <strong>自分</strong> ／ アクセス: <strong>全員</strong></li>
+          <li>「デプロイ」を押してURLをコピー</li>
+        </ol>
+      </div>
+
+      <label class="text-sm font-medium text-gray-700">ウェブアプリURL</label>
+      <input id="setup-url" type="url"
+        placeholder="https://script.google.com/macros/s/…/exec"
+        class="w-full mt-1.5 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+      >
+      <div id="setup-err" class="text-red-600 text-xs mt-2 hidden"></div>
+      <button onclick="saveUrlAndLoad()"
+        class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm transition-colors">
+        接続して読み込む →
+      </button>
+    </div>
+  </div>
+
+  <!-- ホーム -->
+  <div id="v-home" class="view">
+    <div class="hd text-white px-5 pt-4 pb-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xl font-black tracking-tight">韓麻スコア 🀄</div>
+          <div id="home-meta" class="text-xs mt-0.5 opacity-75"></div>
+        </div>
+        <button onclick="refreshData()" id="refresh-btn"
+          class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-xl"
+          title="最新データに更新">🔄</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">🏆 累積収支ランキング</div>
+      <div id="home-rankings"></div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">📅 直近のセッション</div>
+      <div id="home-sessions"></div>
+    </div>
+  </div>
+
+
+
+  <!-- 入力 -->
+  <div id="v-entry" class="view">
+    <div class="hd text-white px-5 py-4">
+      <div class="text-xl font-black">✍️ 入力</div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">今日の1局を追加</div>
+      <label class="text-sm font-medium text-gray-700">日付</label>
+      <input id="entry-date" type="date" class="w-full mt-1.5 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+
+      <div class="mt-4">
+        <div class="text-sm font-medium text-gray-700 mb-2">参加者</div>
+        <div id="entry-participants" class="grid grid-cols-3 gap-2"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">結果</div>
+      <div class="grid grid-cols-2 gap-2">
+        <button type="button" id="entry-win-btn" onclick="setEntryResult('和了')" class="entry-result-btn bg-green-600 text-white py-3 rounded-xl font-bold text-sm">和了</button>
+        <button type="button" id="entry-draw-btn" onclick="setEntryResult('流局')" class="entry-result-btn bg-gray-100 text-gray-700 py-3 rounded-xl font-bold text-sm">流局</button>
+      </div>
+
+      <div id="entry-win-fields" class="mt-4 space-y-4">
+        <div>
+          <label class="text-sm font-medium text-gray-700">上がり者</label>
+          <select id="entry-winner" class="w-full mt-1.5 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400"></select>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium text-gray-700">役</label>
+          <div class="grid grid-cols-2 gap-2 mt-1.5">
+            <button type="button" class="entry-role-btn bg-green-600 text-white py-2.5 rounded-lg font-bold text-sm" onclick="setEntryRole('ロン')">ロン</button>
+            <button type="button" class="entry-role-btn bg-gray-100 text-gray-700 py-2.5 rounded-lg font-bold text-sm" onclick="setEntryRole('ツモ')">ツモ</button>
+            <button type="button" class="entry-role-btn bg-gray-100 text-gray-700 py-2.5 rounded-lg font-bold text-sm" onclick="setEntryRole('リーチロン')">リーチロン</button>
+            <button type="button" class="entry-role-btn bg-gray-100 text-gray-700 py-2.5 rounded-lg font-bold text-sm" onclick="setEntryRole('リーチツモ')">リーチツモ</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium text-gray-700">ドラ</label>
+          <input id="entry-dora" type="number" min="0" step="1" value="0" class="w-full mt-1.5 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+        </div>
+
+        <div id="entry-houjuu-wrap">
+          <label class="text-sm font-medium text-gray-700">放銃者</label>
+          <select id="entry-houjuu" class="w-full mt-1.5 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400"></select>
+        </div>
+      </div>
+
+      <div id="entry-preview" class="mt-4 bg-gray-50 rounded-xl p-3 text-sm text-gray-600"></div>
+      <div id="entry-message" class="mt-3 text-sm hidden"></div>
+      <div class="grid grid-cols-2 gap-2 mt-4">
+        <button id="entry-submit" onclick="submitHand()" class="bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm transition-colors">登録する</button>
+        <button id="entry-cancel" onclick="resetEntryForm()" class="hidden bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-bold text-sm transition-colors">編集をやめる</button>
+      </div>
+      <button id="entry-delete" onclick="deleteHand()" class="hidden w-full mt-3 bg-red-50 hover:bg-red-100 text-red-700 py-3 rounded-xl font-bold text-sm transition-colors">この局を削除する</button>
+    </div>
+  </div>
+
+  <!-- セッション一覧 -->
+  <div id="v-sessions" class="view">
+    <div class="hd text-white px-5 py-4">
+      <div class="text-xl font-black">📅 セッション</div>
+    </div>
+    <div id="sessions-list"></div>
+  </div>
+
+  <!-- 統計 -->
+  <div id="v-stats" class="view">
+    <div class="hd text-white px-5 py-4">
+      <div class="text-xl font-black">📊 統計</div>
+    </div>
+    <div id="stats-content"></div>
+  </div>
+
+  <!-- 設定 -->
+  <div id="v-config" class="view">
+    <div class="hd text-white px-5 py-4">
+      <div class="text-xl font-black">⚙️ 設定</div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">Apps Script URL</div>
+      <input id="config-url" type="url"
+        class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+      >
+      <button onclick="updateUrl()"
+        class="w-full mt-3 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm transition-colors">
+        URLを更新して再読み込み
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">データ情報</div>
+      <div id="config-info" class="text-sm text-gray-600 space-y-1.5"></div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">プレイヤーを追加</div>
+      <input id="player-name" type="text"
+        placeholder="新しいプレイヤー名"
+        class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+      >
+      <div id="player-message" class="text-sm mt-2 hidden"></div>
+      <button onclick="addPlayer()"
+        class="w-full mt-3 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm transition-colors">
+        プレイヤーを追加
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">スプレッドシートを開く</div>
+      <a href="https://docs.google.com/spreadsheets/d/1IvTxu6OyZvGLCnNLCOVQdXiUw_Ftho61XEbArPAFBCk/edit"
+        target="_blank"
+        class="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-sm transition-colors">
+        <span>📊</span> Googleスプレッドシートを開く
+      </a>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">キャッシュをクリア</div>
+      <p class="text-sm text-gray-500 mb-3">最新データを強制的に再取得します。</p>
+      <button onclick="clearCache()"
+        class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-bold text-sm transition-colors">
+        🗑️ キャッシュをクリアして再読み込み
+      </button>
+    </div>
+  </div>
+
+  <!-- ボトムナビ -->
+  <nav class="bnav" id="main-nav" style="display:none">
+    <button class="bnav-btn" onclick="goView('home')">
+      <span class="bnav-icon">🏠</span><span>ホーム</span>
+    </button>
+    <button class="bnav-btn" onclick="goView('entry')">
+      <span class="bnav-icon">✍️</span><span>入力</span>
+    </button>
+    <button class="bnav-btn" onclick="goView('sessions')">
+      <span class="bnav-icon">📅</span><span>履歴</span>
+    </button>
+    <button class="bnav-btn" onclick="goView('stats')">
+      <span class="bnav-icon">📊</span><span>統計</span>
+    </button>
+    <button class="bnav-btn" onclick="goView('config')">
+      <span class="bnav-icon">⚙️</span><span>設定</span>
+    </button>
+  </nav>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  定数
+// ══════════════════════════════════════════
+const URL_KEY   = 'kanma_url_v2';
+const CACHE_KEY = 'kanma_cache_v2';
+const DEFAULT_APP_URL = 'https://script.google.com/macros/s/AKfycbw-EQDb_wPSk31IHy27AjX7008K8C7xZxS4eVVv7LYn0aydOn4jl20pNkSFQMdgK85KRA/exec';
+const LEGACY_APP_URLS = [
+  'https://script.google.com/macros/s/AKfycbzprWPxCGfWtIFD9BzFNDOH5MAIOSGwjGXQPwqNestsMAQ0WiXWbhah2wGNY0HfWV_b1A/exec',
+  'https://script.google.com/macros/s/AKfycbwoRg4s2kzbuvlDulJsVed7TyOQkK8EhoL5jpzYa7jzC7i2oe_8mQv520cUblWrrO1DNg/exec',
+  'https://script.google.com/macros/s/AKfycbx0iHnACVl7xR_uLOfw882_Qq9y7D2iPv9oK0IFyTmBEmguy731I_nr5WZzQgDoWar2yQ/exec',
+  'https://script.google.com/macros/s/AKfycbw5NA5pYVWgVvKbm5zCpradwFloME-EeHLYSHdelAp84-6gAOeLiNJPP7Apopx-VOh3Cg/exec'
+];
+const NAV_VIEWS = ['home','entry','sessions','stats','config'];
+const DEFAULT_PLAYERS = ['えらてん','かぎつみ','くまきり','けい','こう','さち','しょら','しんたに','ぬぅん','ばんば','やまだ','わだち'];
+
+// ══════════════════════════════════════════
+//  状態
+// ══════════════════════════════════════════
+let APP_URL = normalizeAppUrl(localStorage.getItem(URL_KEY) || DEFAULT_APP_URL);
+let gData   = null;  // { hands, sessions, players, totalHands }
+
+// ══════════════════════════════════════════
+//  初期化
+// ══════════════════════════════════════════
+async function init() {
+  localStorage.setItem(URL_KEY, APP_URL);
+  if (!APP_URL) {
+    var setupUrlEl = document.getElementById('setup-url');
+    if (setupUrlEl) setupUrlEl.value = DEFAULT_APP_URL;
+    showView('setup');
+    return;
+  }
+
+  showNav(true);
+
+  // キャッシュから先に表示
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached) {
+    try {
+      gData = processData(JSON.parse(cached));
+      renderAll();
+      goView('home');
+    } catch(e) { /* キャッシュ破損 */ }
+  } else {
+    showView('loading');
+  }
+
+  // 最新データを取得
+  await fetchData(gData !== null);
+}
+
+// ══════════════════════════════════════════
+//  データ取得
+// ══════════════════════════════════════════
+async function fetchData(silent = false) {
+  if (!silent) showView('loading');
+  setRefreshing(true);
+  try {
+    const res  = await fetch(APP_URL, { redirect:'follow', cache:'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+
+    localStorage.setItem(CACHE_KEY, JSON.stringify(json));
+    gData = processData(json);
+    renderAll();
+    if (!silent) goView('home');
+  } catch(e) {
+    if (!gData) {
+      showNav(false);
+      showView('setup');
+      showSetupErr('データの取得に失敗しました: ' + e.message);
+    }
+  } finally {
+    setRefreshing(false);
+  }
+}
+
+async function refreshData() {
+  await fetchData(false);
+}
+
+async function clearCache() {
+  localStorage.removeItem(CACHE_KEY);
+  gData = null;
+  await fetchData(false);
+}
+
+// ══════════════════════════════════════════
+//  データ処理
+// ══════════════════════════════════════════
+function processData(json) {
+  const raw = (json.hands || []).filter(function(h){ return h.date; });
+  const knownPlayers = (json.players || []).filter(function(player){ return player && player.enabled; });
+
+  // 日付でセッションにグループ化
+  var sesMap = {};
+  raw.forEach(function(h) {
+    if (!sesMap[h.date]) sesMap[h.date] = { date: h.date, hands: [] };
+    sesMap[h.date].hands.push(h);
+  });
+  var sessions = Object.values(sesMap).sort(function(a,b){ return b.date.localeCompare(a.date); });
+
+  // プレイヤー集計
+  var pMap = {};
+  raw.forEach(function(h) {
+    (h.participants || []).forEach(function(p) {
+      if (!p.name) return;
+      if (!pMap[p.name]) {
+        pMap[p.name] = {
+          name: p.name, total: 0, hands: 0, sessions: new Set(),
+          wins: 0, ron: 0, tsumo: 0, houjuu: 0, riichi: 0
+        };
+      }
+      var pl = pMap[p.name];
+      pl.total += (p.score || 0);
+      pl.hands++;
+      pl.sessions.add(h.date);
+      if (h.winner === p.name) {
+        pl.wins++;
+        var r = h.role || '';
+        if (r === 'ロン' || r === 'リーチロン')   pl.ron++;
+        if (r === 'ツモ' || r === 'リーチツモ') pl.tsumo++;
+        if (r.indexOf('リーチ') === 0) pl.riichi++;
+      }
+      if (h.houjuu === p.name) pl.houjuu++;
+    });
+  });
+
+  var players = Object.values(pMap)
+    .map(function(p){ return Object.assign({}, p, { sessions: p.sessions.size }); })
+    .sort(function(a,b){ return b.total - a.total; });
+
+  return { hands: raw, sessions: sessions, players: players, knownPlayers: knownPlayers, totalHands: raw.length, updatedAt: json.updatedAt };
+}
+
+function isDrawHand(hand) {
+  return hand && (hand.winner === '流局' || (!hand.winner && !hand.role));
+}
+
+// ══════════════════════════════════════════
+//  描画
+// ══════════════════════════════════════════
+function renderAll() {
+  renderHome();
+  renderEntry();
+  renderSessions();
+  renderStats();
+  renderConfig();
+}
+
+/* ── ホーム ── */
+function renderHome() {
+  if (!gData) return;
+  var players  = gData.players;
+  var sessions = gData.sessions;
+  var totalHands = gData.totalHands;
+
+  var metaEl = document.getElementById('home-meta');
+  if (metaEl) metaEl.textContent = '全' + sessions.length + 'セッション・' + totalHands + '局';
+
+  // ランキング
+  var rkEl = document.getElementById('home-rankings');
+  if (!rkEl) return;
+  if (!players.length) {
+    rkEl.innerHTML = '<div class="text-gray-400 text-sm text-center py-4">データがありません</div>';
+    return;
+  }
+
+  rkEl.innerHTML = players.map(function(p, i) {
+    var cls  = p.total > 0 ? 'sp' : p.total < 0 ? 'sn' : 'sz';
+    var sign = p.total > 0 ? '+' : '';
+    var bCls = i===0 ? 'rk-1' : i===1 ? 'rk-2' : i===2 ? 'rk-3' : 'rk-n';
+    return '<div class="flex items-center py-2.5" style="border-bottom:1px solid #f5f5f5">' +
+      '<div class="rk-badge ' + bCls + ' mr-3">' + (i+1) + '</div>' +
+      '<div class="flex-1 font-semibold text-gray-800">' + esc(p.name) + '</div>' +
+      '<div class="text-xs text-gray-400 mr-3">' + p.hands + '局</div>' +
+      '<div class="' + cls + ' text-lg font-black">' + sign + p.total + '</div>' +
+      '</div>';
+  }).join('');
+
+  // 直近セッション（3件）
+  var sesEl = document.getElementById('home-sessions');
+  if (!sesEl) return;
+  sesEl.innerHTML = sessions.slice(0,3).map(function(s) {
+    var winC = s.hands.filter(function(h){ return !isDrawHand(h); }).length;
+    var ryuC = s.hands.length - winC;
+    return '<div class="flex items-center py-2.5" style="border-bottom:1px solid #f5f5f5">' +
+      '<div class="flex-1">' +
+        '<div class="font-medium text-sm text-gray-800">' + s.date + '</div>' +
+        '<div class="text-xs text-gray-400 mt-0.5">' + s.hands.length + '局・流局' + ryuC + '回</div>' +
+      '</div>' +
+      '<button onclick="goViewAndScrollSession(\'' + s.date + '\')" class="text-green-600 font-semibold text-sm">詳細 →</button>' +
+      '</div>';
+  }).join('');
+}
+
+/* ── セッション一覧 ── */
+function renderSessions() {
+  if (!gData) return;
+  var sessions = gData.sessions;
+  var container = document.getElementById('sessions-list');
+  if (!container) return;
+
+  if (!sessions.length) {
+    container.innerHTML = '<div class="card text-gray-400 text-sm text-center py-6">データがありません</div>';
+    return;
+  }
+
+  container.innerHTML = sessions.map(function(s, si) {
+    var sesNum = sessions.length - si;
+
+    var pMap = {};
+    s.hands.forEach(function(h) {
+      (h.participants || []).forEach(function(p) {
+        if (!p.name) return;
+        if (!pMap[p.name]) pMap[p.name] = { name: p.name, total: 0, wins: 0 };
+        pMap[p.name].total += (p.score || 0);
+        if (h.winner === p.name) pMap[p.name].wins++;
+      });
+    });
+    var pList = Object.values(pMap).sort(function(a,b){ return b.total - a.total; });
+
+    var ronC   = s.hands.filter(function(h){ return h.role === 'ロン'  || h.role === 'リーチロン'; }).length;
+    var tsumoC = s.hands.filter(function(h){ return h.role === 'ツモ' || h.role === 'リーチツモ'; }).length;
+    var riiC   = s.hands.filter(function(h){ return (h.role||'').indexOf('リーチ') === 0; }).length;
+    var ryuC   = s.hands.filter(function(h){ return isDrawHand(h); }).length;
+
+    var pRows = pList.map(function(p) {
+      var cls  = p.total > 0 ? 'sp' : p.total < 0 ? 'sn' : 'sz';
+      var sign = p.total > 0 ? '+' : '';
+      return '<div class="flex items-center py-2" style="border-bottom:1px solid #fafafa">' +
+        '<div class="flex-1 font-medium text-sm text-gray-800">' + esc(p.name) + '</div>' +
+        '<div class="text-xs text-gray-400 mr-3">上がり ' + p.wins + '回</div>' +
+        '<div class="' + cls + ' font-black text-sm">' + sign + p.total + '</div>' +
+        '</div>';
+    }).join('');
+
+    var handRows = s.hands.map(function(h, hi) { return renderHandRow(h, hi); }).join('');
+
+    return '<div class="card" id="ses-' + s.date + '">' +
+      '<details open>' +
+        '<summary>' +
+          '<div class="flex items-center justify-between">' +
+            '<div>' +
+              '<div class="font-bold text-gray-800">第' + sesNum + '回　' + s.date + '</div>' +
+              '<div class="flex gap-1.5 mt-1.5 flex-wrap">' +
+                '<span class="tag tag-ron">ロン ' + ronC + '</span>' +
+                '<span class="tag tag-tsumo">ツモ ' + tsumoC + '</span>' +
+                '<span class="tag tag-riichi">リーチ ' + riiC + '</span>' +
+                (ryuC ? '<span class="tag tag-ryu">流局 ' + ryuC + '</span>' : '') +
+              '</div>' +
+            '</div>' +
+            '<span class="text-gray-400 text-sm ml-3">▲</span>' +
+          '</div>' +
+        '</summary>' +
+        '<div class="mt-3 pt-3" style="border-top:1px solid #f0f0f0">' +
+          pRows +
+        '</div>' +
+        '<details class="mt-3">' +
+          '<summary class="text-xs text-green-600 font-semibold cursor-pointer py-1">全' + s.hands.length + '局の詳細 ▼</summary>' +
+          '<div class="mt-2 space-y-1">' + handRows + '</div>' +
+        '</details>' +
+      '</details>' +
+    '</div>';
+  }).join('');
+}
+
+function renderHandRow(h, hi) {
+  var roleTag = '';
+  var r = h.role || '';
+  if (r === 'ロン')       roleTag = '<span class="tag tag-ron">ロン</span>';
+  else if (r === 'ツモ')  roleTag = '<span class="tag tag-tsumo">ツモ</span>';
+  else if (r === 'リーチロン') roleTag = '<span class="tag tag-ron">ロン</span><span class="tag tag-riichi ml-1">リーチ</span>';
+  else if (r === 'リーチツモ') roleTag = '<span class="tag tag-tsumo">ツモ</span><span class="tag tag-riichi ml-1">リーチ</span>';
+  else roleTag = '<span class="tag tag-ryu">流局</span>';
+
+  var doraStr = h.dora ? 'ドラ' + h.dora : '';
+  var pts     = h.scoreTotal ? h.scoreTotal + '点' : '';
+
+  return '<div class="py-1.5 px-2 rounded-lg bg-gray-50 text-xs">' +
+    '<div class="flex items-center gap-1.5 flex-wrap">' +
+      '<span class="text-gray-400 font-mono w-5 text-right">' + (hi+1) + '</span>' +
+      roleTag +
+      (!isDrawHand(h) && h.winner ? '<span class="font-bold text-gray-700">' + esc(h.winner) + '</span>' : '') +
+      (pts      ? '<span class="text-green-700 font-semibold">' + pts + '</span>' : '') +
+      (doraStr  ? '<span class="text-amber-600">' + doraStr + '</span>' : '') +
+      (h.houjuu ? '<span class="text-red-400">← ' + esc(h.houjuu) + '</span>' : '') +
+      (h.handId ? '<button onclick="startEditHand(\'' + esc(h.handId) + '\')" class="ml-auto text-green-600 font-semibold">編集</button>' : '') +
+    '</div>' +
+  '</div>';
+}
+
+/* ── 統計 ── */
+function renderStats() {
+  if (!gData) return;
+  var players    = gData.players;
+  var totalHands = gData.totalHands;
+  var sessions   = gData.sessions;
+  var hands      = gData.hands;
+  var el = document.getElementById('stats-content');
+  if (!el) return;
+
+  var drawHands        = hands.filter(function(h){ return isDrawHand(h); }).length;
+  var settledHands     = totalHands - drawHands;
+  var agariHands       = settledHands;
+  var riichiAgari      = hands.filter(function(h){ return h.role === 'リーチロン' || h.role === 'リーチツモ'; }).length;
+  var nonRiichiAgari   = hands.filter(function(h){ return h.role === 'ロン' || h.role === 'ツモ'; }).length;
+  var ronAgari         = hands.filter(function(h){ return h.role === 'ロン' || h.role === 'リーチロン'; }).length;
+  var riichiRonAgari   = hands.filter(function(h){ return h.role === 'リーチロン'; }).length;
+  var nonRiichiRonAgari = hands.filter(function(h){ return h.role === 'ロン'; }).length;
+  var tsumoAgari       = hands.filter(function(h){ return h.role === 'ツモ' || h.role === 'リーチツモ'; }).length;
+  var riichiTsumoAgari = hands.filter(function(h){ return h.role === 'リーチツモ'; }).length;
+  var nonRiichiTsumoAgari = hands.filter(function(h){ return h.role === 'ツモ'; }).length;
+
+  function rate(numerator, denominator) {
+    return denominator ? (numerator / denominator * 100).toFixed(1) + '%' : '0.0%';
+  }
+
+  function withRate(count, denominator) {
+    return count + '局（' + rate(count, denominator) + '）';
+  }
+
+  var pRows = players.map(function(p) {
+    var cls        = p.total > 0 ? 'sp' : p.total < 0 ? 'sn' : 'sz';
+    var sign       = p.total > 0 ? '+' : '';
+    var winRate    = p.hands ? (p.wins  / p.hands * 100).toFixed(1) : '0.0';
+    var ronRate2   = p.wins  ? (p.ron   / p.wins  * 100).toFixed(0) : '0';
+    var tsumoRate2 = p.wins  ? (p.tsumo / p.wins  * 100).toFixed(0) : '0';
+    return '<div class="py-3" style="border-bottom:1px solid #f0f0f0">' +
+      '<div class="flex items-center mb-1">' +
+        '<div class="flex-1 font-bold text-gray-800">' + esc(p.name) + '</div>' +
+        '<div class="' + cls + ' font-black text-base">' + sign + p.total + '点</div>' +
+      '</div>' +
+      '<div class="grid grid-cols-2 gap-x-3 text-xs text-gray-500 mt-1.5">' +
+        '<span>参加: ' + p.sessions + '回・' + p.hands + '局</span>' +
+        '<span>上がり: ' + p.wins + '回 (' + winRate + '%)</span>' +
+        '<span>ロン: ' + p.ron + '回 (' + ronRate2 + '%)</span>' +
+        '<span>ツモ: ' + p.tsumo + '回 (' + tsumoRate2 + '%)</span>' +
+        '<span>リーチ和了: ' + p.riichi + '回</span>' +
+        '<span>放銃: ' + p.houjuu + '回</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  el.innerHTML =
+    '<div class="card">' +
+      '<div class="sec-title">📈 全体統計</div>' +
+      '<div class="stat-row"><span class="stat-label">総局数</span><span class="stat-val">' + totalHands + '局</span></div>' +
+      '<div class="stat-row"><span class="stat-label">流局</span><span class="stat-val">' + withRate(drawHands, totalHands) + '</span></div>' +
+      '<div class="stat-row"><span class="stat-label">決着</span><span class="stat-val">' + withRate(settledHands, totalHands) + '</span></div>' +
+      '<div class="stat-row"><span class="stat-label">和了</span><span class="stat-val">' + withRate(agariHands, totalHands) + '</span></div>' +
+      '<div class="stat-row"><span class="stat-label">リーチ和了</span><span class="stat-val">' + withRate(riichiAgari, agariHands) + '</span></div>' +
+      '<div class="stat-row"><span class="stat-label">リーチなし和了</span><span class="stat-val">' + withRate(nonRiichiAgari, agariHands) + '</span></div>' +
+      '<div class="stat-row"><span class="stat-label">ロン和了</span><span class="stat-val">' + withRate(ronAgari, totalHands) + '</span></div>' +
+      '<div class="stat-row"><span class="stat-label">リーチロン和了</span><span class="stat-val">' + withRate(riichiRonAgari, riichiAgari) + '</span></div>' +
+      '<div class="stat-row"><span class="stat-label">リーチ無ロン和了</span><span class="stat-val">' + withRate(nonRiichiRonAgari, nonRiichiAgari) + '</span></div>' +
+      '<div class="stat-row"><span class="stat-label">ツモ和了</span><span class="stat-val">' + withRate(tsumoAgari, totalHands) + '</span></div>' +
+      '<div class="stat-row"><span class="stat-label">リーチツモ和了</span><span class="stat-val">' + withRate(riichiTsumoAgari, riichiAgari) + '</span></div>' +
+      '<div class="stat-row" style="border:none"><span class="stat-label">リーチ無ツモ和了</span><span class="stat-val">' + withRate(nonRiichiTsumoAgari, nonRiichiAgari) + '</span></div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<div class="sec-title">👥 プレイヤー別</div>' +
+      pRows +
+    '</div>';
+}
+
+/* ── 設定 ── */
+function renderConfig() {
+  var urlEl = document.getElementById('config-url');
+  if (urlEl) urlEl.value = APP_URL;
+
+  if (!gData) return;
+  var infoEl = document.getElementById('config-info');
+  if (infoEl) {
+    var updated = gData.updatedAt ? new Date(gData.updatedAt).toLocaleString('ja-JP') : '不明';
+    infoEl.innerHTML =
+      '<div class="stat-row"><span class="stat-label">総局数</span><span class="stat-val">' + gData.totalHands + '局</span></div>' +
+      '<div class="stat-row"><span class="stat-label">セッション数</span><span class="stat-val">' + gData.sessions.length + '回</span></div>' +
+      '<div class="stat-row"><span class="stat-label">プレイヤー数</span><span class="stat-val">' + gData.players.length + '人</span></div>' +
+      '<div class="stat-row" style="border:none"><span class="stat-label">最終更新</span><span class="stat-val text-xs">' + updated + '</span></div>';
+  }
+}
+
+
+// ══════════════════════════════════════════
+//  入力フォーム
+// ══════════════════════════════════════════
+let entryState = { mode: 'create', handId: '', result: '和了', role: 'ロン' };
+
+function renderEntry() {
+  var dateEl = document.getElementById('entry-date');
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
+
+  var wrap = document.getElementById('entry-participants');
+  if (wrap) {
+    var selected = selectedEntryPlayers();
+    var players = getEntryPlayerOptions();
+    wrap.innerHTML = players.map(function(name, i) {
+      var checked = selected.length ? selected.includes(name) : i < 4;
+      return '<label class="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2 py-2 text-sm">' +
+        '<input type="checkbox" class="entry-player" value="' + esc(name) + '" ' + checked + ' onchange="updateEntryOptions()">' +
+        '<span>' + esc(name) + '</span>' +
+      '</label>';
+    }).join('');
+  }
+  setEntryResult(entryState.result);
+  setEntryRole(entryState.role);
+  updateEntryModeUI();
+  updateEntryOptions();
+}
+
+function selectedEntryPlayers() {
+  return Array.from(document.querySelectorAll('.entry-player:checked')).map(function(el){ return el.value; });
+}
+
+function getEntryPlayerOptions() {
+  var fromData = gData && gData.knownPlayers ? gData.knownPlayers.map(function(p){ return p.name; }) : gData && gData.players ? gData.players.map(function(p){ return p.name; }) : [];
+  return Array.from(new Set(fromData.concat(DEFAULT_PLAYERS)));
+}
+
+function updateEntryModeUI() {
+  var submit = document.getElementById('entry-submit');
+  var cancel = document.getElementById('entry-cancel');
+  var del = document.getElementById('entry-delete');
+  if (submit) submit.textContent = entryState.mode === 'update' ? '更新する' : '登録する';
+  if (cancel) cancel.classList.toggle('hidden', entryState.mode !== 'update');
+  if (del) del.classList.toggle('hidden', entryState.mode !== 'update');
+}
+
+function setEntryResult(result) {
+  entryState.result = result;
+  document.getElementById('entry-win-btn').className = result === '和了'
+    ? 'entry-result-btn bg-green-600 text-white py-3 rounded-xl font-bold text-sm'
+    : 'entry-result-btn bg-gray-100 text-gray-700 py-3 rounded-xl font-bold text-sm';
+  document.getElementById('entry-draw-btn').className = result === '流局'
+    ? 'entry-result-btn bg-green-600 text-white py-3 rounded-xl font-bold text-sm'
+    : 'entry-result-btn bg-gray-100 text-gray-700 py-3 rounded-xl font-bold text-sm';
+  document.getElementById('entry-win-fields').style.display = result === '和了' ? 'block' : 'none';
+  updateEntryOptions();
+}
+
+function setEntryRole(role) {
+  entryState.role = role;
+  document.querySelectorAll('.entry-role-btn').forEach(function(btn) {
+    var active = btn.textContent === role;
+    btn.className = active
+      ? 'entry-role-btn bg-green-600 text-white py-2.5 rounded-lg font-bold text-sm'
+      : 'entry-role-btn bg-gray-100 text-gray-700 py-2.5 rounded-lg font-bold text-sm';
+  });
+  updateEntryOptions();
+}
+
+function updateEntryOptions() {
+  var players = selectedEntryPlayers();
+  var winner = document.getElementById('entry-winner');
+  var houjuu = document.getElementById('entry-houjuu');
+  var previousWinner = winner ? winner.value : '';
+  var previousHoujuu = houjuu ? houjuu.value : '';
+
+  if (winner) {
+    winner.innerHTML = players.map(function(name){ return '<option value="' + esc(name) + '">' + esc(name) + '</option>'; }).join('');
+    if (players.includes(previousWinner)) winner.value = previousWinner;
+  }
+
+  var isRon = entryState.role === 'ロン' || entryState.role === 'リーチロン';
+  var houjuuWrap = document.getElementById('entry-houjuu-wrap');
+  if (houjuuWrap) houjuuWrap.style.display = isRon && entryState.result === '和了' ? 'block' : 'none';
+  if (houjuu) {
+    var winnerName = winner ? winner.value : '';
+    var candidates = players.filter(function(name){ return name !== winnerName; });
+    houjuu.innerHTML = candidates.map(function(name){ return '<option value="' + esc(name) + '">' + esc(name) + '</option>'; }).join('');
+    if (candidates.includes(previousHoujuu)) houjuu.value = previousHoujuu;
+  }
+
+  updateEntryPreview();
+}
+
+function updateEntryPreview() {
+  var players = selectedEntryPlayers();
+  var msg = document.getElementById('entry-preview');
+  if (!msg) return;
+
+  if (players.length < 2 || players.length > 4) {
+    msg.innerHTML = '<span class="text-red-600 font-semibold">参加者は2〜4人で選んでください。</span>';
+    return;
+  }
+
+  if (entryState.result === '流局') {
+    msg.textContent = '流局として、参加者全員の収支0で登録します。';
+    return;
+  }
+
+  var winner = document.getElementById('entry-winner').value;
+  var dora = Number(document.getElementById('entry-dora').value || 0);
+  var isRon = entryState.role === 'ロン' || entryState.role === 'リーチロン';
+  var base = entryState.role === 'ロン' ? 6 : entryState.role === 'リーチロン' ? 8 : entryState.role === 'ツモ' ? 2 : 4;
+  var perPerson = base + dora;
+  var total = isRon ? perPerson : perPerson * (players.length - 1);
+  msg.textContent = winner + ' / ' + entryState.role + ' / ドラ' + dora + ' / 上がり者 +' + total + '点';
+}
+
+document.addEventListener('input', function(e) {
+  if (e.target && (e.target.id === 'entry-dora' || e.target.id === 'entry-winner')) updateEntryOptions();
+});
+
+document.addEventListener('change', function(e) {
+  if (e.target && e.target.id === 'entry-winner') updateEntryOptions();
+});
+
+async function submitHand() {
+  var message = document.getElementById('entry-message');
+  var submit = document.getElementById('entry-submit');
+  var players = selectedEntryPlayers();
+  var isRon = entryState.role === 'ロン' || entryState.role === 'リーチロン';
+
+  function showMessage(text, ok) {
+    message.textContent = text;
+    message.className = ok ? 'mt-3 text-sm text-green-700' : 'mt-3 text-sm text-red-600';
+  }
+
+  if (players.length < 2 || players.length > 4) {
+    showMessage('参加者は2〜4人で選んでください。', false);
+    return;
+  }
+
+  var payload = {
+    mode: entryState.mode,
+    handId: entryState.handId,
+    date: document.getElementById('entry-date').value,
+    result: entryState.result,
+    participants: players,
+    source: 'web'
+  };
+
+  if (entryState.result === '和了') {
+    payload.winner = document.getElementById('entry-winner').value;
+    payload.role = entryState.role;
+    payload.dora = Number(document.getElementById('entry-dora').value || 0);
+    payload.houjuu = isRon ? document.getElementById('entry-houjuu').value : '';
+  }
+
+  submit.disabled = true;
+  submit.textContent = entryState.mode === 'update' ? '更新中...' : '登録中...';
+  showMessage('', true);
+
+  try {
+    const res = await fetch(APP_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || '登録に失敗しました');
+    localStorage.removeItem(CACHE_KEY);
+    showMessage(entryState.mode === 'update' ? '更新しました。最新データを読み込みます。' : '登録しました。最新データを読み込みます。', true);
+    await fetchData(true);
+    resetEntryForm();
+  } catch (e) {
+    showMessage('登録に失敗しました: ' + e.message, false);
+  } finally {
+    submit.disabled = false;
+    updateEntryModeUI();
+  }
+}
+
+function resetEntryForm() {
+  var keepPlayers = selectedEntryPlayers();
+  var keepDate = document.getElementById('entry-date') ? document.getElementById('entry-date').value : '';
+  entryState.mode = 'create';
+  entryState.handId = '';
+  entryState.result = '和了';
+  entryState.role = 'ロン';
+  var doraEl = document.getElementById('entry-dora');
+  if (doraEl) doraEl.value = '0';
+  renderEntry();
+  if (keepDate && document.getElementById('entry-date')) document.getElementById('entry-date').value = keepDate;
+  if (keepPlayers.length) {
+    document.querySelectorAll('.entry-player').forEach(function(el) {
+      el.checked = keepPlayers.includes(el.value);
+    });
+    updateEntryOptions();
+  }
+  var message = document.getElementById('entry-message');
+  if (message) message.className = 'mt-3 text-sm hidden';
+}
+
+function findHandById(handId) {
+  if (!gData || !gData.hands) return null;
+  return gData.hands.find(function(hand) { return hand.handId === handId; }) || null;
+}
+
+function startEditHand(handId) {
+  var hand = findHandById(handId);
+  if (!hand) return;
+
+  entryState.mode = 'update';
+  entryState.handId = hand.handId;
+  entryState.result = isDrawHand(hand) ? '流局' : '和了';
+  entryState.role = hand.role || 'ロン';
+  renderEntry();
+  goView('entry');
+
+  if (document.getElementById('entry-date')) document.getElementById('entry-date').value = normalizeDateInputValue(hand.date);
+  document.querySelectorAll('.entry-player').forEach(function(el) {
+    el.checked = (hand.participants || []).some(function(p) { return p.name === el.value; });
+  });
+  updateEntryOptions();
+
+  if (!isDrawHand(hand)) {
+    if (document.getElementById('entry-winner')) document.getElementById('entry-winner').value = hand.winner || '';
+    if (document.getElementById('entry-dora')) document.getElementById('entry-dora').value = String(hand.dora || 0);
+    updateEntryOptions();
+    if (document.getElementById('entry-houjuu')) document.getElementById('entry-houjuu').value = hand.houjuu || '';
+  }
+
+  var message = document.getElementById('entry-message');
+  if (message) {
+    message.textContent = 'この局を編集しています。保存すると上書きされます。';
+    message.className = 'mt-3 text-sm text-amber-700';
+  }
+}
+
+async function deleteHand() {
+  if (entryState.mode !== 'update' || !entryState.handId) return;
+  if (!window.confirm('この局を削除します。元に戻せません。')) return;
+
+  var submit = document.getElementById('entry-submit');
+  var del = document.getElementById('entry-delete');
+  var message = document.getElementById('entry-message');
+
+  function showMessage(text, ok) {
+    message.textContent = text;
+    message.className = ok ? 'mt-3 text-sm text-green-700' : 'mt-3 text-sm text-red-600';
+  }
+
+  if (submit) submit.disabled = true;
+  if (del) del.disabled = true;
+  showMessage('', true);
+
+  try {
+    const res = await fetch(APP_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      body: JSON.stringify({
+        mode: 'delete',
+        handId: entryState.handId,
+        source: 'web'
+      })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || '削除に失敗しました');
+    localStorage.removeItem(CACHE_KEY);
+    showMessage('削除しました。最新データを読み込みます。', true);
+    await fetchData(true);
+    resetEntryForm();
+  } catch (e) {
+    showMessage('削除に失敗しました: ' + e.message, false);
+  } finally {
+    if (submit) submit.disabled = false;
+    if (del) del.disabled = false;
+    updateEntryModeUI();
+  }
+}
+
+function normalizeDateInputValue(value) {
+  if (!value) return new Date().toISOString().slice(0, 10);
+  if (/^\d{4}\/\d{2}\/\d{2}$/.test(value)) return value.replace(/\//g, '-');
+  if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(value)) {
+    var parts = value.split('/');
+    return parts[0] + '-' + parts[1].padStart(2, '0') + '-' + parts[2].padStart(2, '0');
+  }
+  return value;
+}
+
+// ══════════════════════════════════════════
+//  ビュー切替
+// ══════════════════════════════════════════
+function showView(name) {
+  document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+  var el = document.getElementById('v-' + name);
+  if (el) el.classList.add('active');
+}
+
+function showNav(show) {
+  document.getElementById('main-nav').style.display = show ? 'grid' : 'none';
+}
+
+function goView(name) {
+  showView(name);
+  document.querySelectorAll('.bnav-btn').forEach(function(b, i){
+    b.classList.toggle('active', NAV_VIEWS[i] === name);
+  });
+}
+
+function goViewAndScrollSession(date) {
+  goView('sessions');
+  setTimeout(function() {
+    var el = document.getElementById('ses-' + date);
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  }, 80);
+}
+
+// ══════════════════════════════════════════
+//  UI ユーティリティ
+// ══════════════════════════════════════════
+function setRefreshing(on) {
+  var btn = document.getElementById('refresh-btn');
+  if (btn) {
+    if (on) btn.classList.add('spin');
+    else    btn.classList.remove('spin');
+  }
+}
+
+function showSetupErr(msg) {
+  var el = document.getElementById('setup-err');
+  if (el) { el.textContent = msg; el.classList.remove('hidden'); }
+}
+
+function normalizeAppUrl(url) {
+  var value = (url || '').trim();
+  if (!value) return DEFAULT_APP_URL;
+  return LEGACY_APP_URLS.includes(value) ? DEFAULT_APP_URL : value;
+}
+
+function showPlayerMessage(msg, ok) {
+  var el = document.getElementById('player-message');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = ok ? 'text-sm mt-2 text-green-700' : 'text-sm mt-2 text-red-600';
+}
+
+function esc(str) {
+  return String(str || '').replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+// ══════════════════════════════════════════
+//  URL 設定
+// ══════════════════════════════════════════
+async function saveUrlAndLoad() {
+  var url = normalizeAppUrl((document.getElementById('setup-url').value || DEFAULT_APP_URL).trim());
+  if (!url.startsWith('https://')) {
+    showSetupErr('正しいURLを入力してください（https://…）');
+    return;
+  }
+  APP_URL = url;
+  localStorage.setItem(URL_KEY, url);
+  showNav(true);
+  showView('loading');
+  await fetchData(false);
+}
+
+async function updateUrl() {
+  var url = normalizeAppUrl((document.getElementById('config-url').value || '').trim());
+  if (!url.startsWith('https://')) {
+    alert('正しいURLを入力してください');
+    return;
+  }
+  APP_URL = url;
+  localStorage.setItem(URL_KEY, url);
+  localStorage.removeItem(CACHE_KEY);
+  gData = null;
+  showView('loading');
+  await fetchData(false);
+}
+
+async function addPlayer() {
+  var input = document.getElementById('player-name');
+  var name = (input && input.value || '').trim();
+  if (!name) {
+    showPlayerMessage('プレイヤー名を入力してください。', false);
+    return;
+  }
+
+  try {
+    const res = await fetch(APP_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      body: JSON.stringify({
+        mode: 'addPlayer',
+        name: name,
+        source: 'web'
+      })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'プレイヤー追加に失敗しました');
+    if (input) input.value = '';
+    showPlayerMessage('プレイヤーを追加しました。最新データを読み込みます。', true);
+    localStorage.removeItem(CACHE_KEY);
+    await fetchData(true);
+    renderEntry();
+  } catch (e) {
+    var extra = '';
+    if (String(e.message || '').indexOf('参加者は2〜4人') !== -1) {
+      extra = ' Apps ScriptのURLが古い可能性があります。設定画面のURLを確認して再読み込みしてください。';
+    }
+    showPlayerMessage('プレイヤー追加に失敗しました: ' + e.message + extra, false);
+  }
+}
+
+// ══════════════════════════════════════════
+//  起動
+// ══════════════════════════════════════════
+init();
+</script>
+</body>
+</html>
