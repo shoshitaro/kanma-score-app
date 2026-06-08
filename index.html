@@ -357,6 +357,7 @@ const DEFAULT_PLAYERS = ['えらてん','かぎつみ','くまきり','けい','
 // ══════════════════════════════════════════
 let APP_URL = normalizeAppUrl(localStorage.getItem(URL_KEY) || DEFAULT_APP_URL);
 let gData   = null;  // { hands, sessions, players, totalHands }
+let lastEntryPlayers = [];
 
 // ══════════════════════════════════════════
 //  初期化
@@ -768,6 +769,7 @@ function renderEntry() {
   var wrap = document.getElementById('entry-participants');
   if (wrap) {
     var selected = selectedEntryPlayers();
+    if (!selected.length && lastEntryPlayers.length) selected = lastEntryPlayers.slice();
     var players = getEntryPlayerOptions();
     wrap.innerHTML = players.map(function(name, i) {
       var checked = selected.length ? selected.includes(name) : i < 4;
@@ -885,6 +887,7 @@ async function submitHand() {
   var message = document.getElementById('entry-message');
   var submit = document.getElementById('entry-submit');
   var players = selectedEntryPlayers();
+  lastEntryPlayers = players.slice();
   var isRon = entryState.role === 'ロン' || entryState.role === 'リーチロン';
 
   function showMessage(text, ok) {
@@ -928,7 +931,7 @@ async function submitHand() {
     localStorage.removeItem(CACHE_KEY);
     showMessage(entryState.mode === 'update' ? '更新しました。最新データを読み込みます。' : '登録しました。最新データを読み込みます。', true);
     await fetchData(true);
-    resetEntryForm();
+    resetEntryForm(players);
   } catch (e) {
     showMessage('登録に失敗しました: ' + e.message, false);
   } finally {
@@ -937,8 +940,9 @@ async function submitHand() {
   }
 }
 
-function resetEntryForm() {
-  var keepPlayers = selectedEntryPlayers();
+function resetEntryForm(keepPlayersOverride) {
+  var keepPlayers = Array.isArray(keepPlayersOverride) ? keepPlayersOverride.slice() : selectedEntryPlayers();
+  if (keepPlayers.length) lastEntryPlayers = keepPlayers.slice();
   var keepDate = document.getElementById('entry-date') ? document.getElementById('entry-date').value : '';
   entryState.mode = 'create';
   entryState.handId = '';
