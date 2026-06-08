@@ -235,6 +235,7 @@
 
       <div id="entry-preview" class="mt-4 bg-gray-50 rounded-xl p-3 text-sm text-gray-600"></div>
       <div id="entry-message" class="mt-3 text-sm hidden"></div>
+      <div id="entry-last-submitted" class="mt-3 hidden bg-green-50 border border-green-100 rounded-xl p-3 text-sm text-green-800"></div>
       <div class="grid grid-cols-2 gap-2 mt-4">
         <button id="entry-submit" onclick="submitHand()" class="bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm transition-colors">登録する</button>
         <button id="entry-cancel" onclick="resetEntryForm()" class="hidden bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-bold text-sm transition-colors">編集をやめる</button>
@@ -366,6 +367,7 @@ const DEFAULT_PLAYERS = ['えらてん','かぎつみ','くまきり','けい','
 let APP_URL = normalizeAppUrl(localStorage.getItem(URL_KEY) || DEFAULT_APP_URL);
 let gData   = null;  // { hands, sessions, players, totalHands }
 let lastEntryPlayers = [];
+let lastSubmittedText = '';
 
 // ══════════════════════════════════════════
 //  初期化
@@ -883,6 +885,35 @@ function updateEntryPreview() {
   msg.textContent = winner + ' / ' + entryState.role + ' / ドラ' + dora + ' / +' + total + '点';
 }
 
+function formatEntrySummary(payload) {
+  if (!payload) return '';
+  if (payload.result === '流局') {
+    return (payload.date || '') + ' / 流局 / ' + (payload.participants || []).join('・');
+  }
+
+  var winner = payload.winner || '';
+  var role = payload.role || '';
+  var dora = Number(payload.dora || 0);
+  var players = payload.participants || [];
+  var isRon = role === 'ロン' || role === 'リーチロン';
+  var base = role === 'ロン' ? 6 : role === 'リーチロン' ? 8 : role === 'ツモ' ? 2 : 4;
+  var perPerson = base + dora;
+  var total = isRon ? perPerson : perPerson * Math.max(players.length - 1, 1);
+  return winner + ' / ' + role + ' / ドラ' + dora + ' / +' + total + '点';
+}
+
+function renderLastSubmitted() {
+  var el = document.getElementById('entry-last-submitted');
+  if (!el) return;
+  if (!lastSubmittedText) {
+    el.className = 'mt-3 hidden bg-green-50 border border-green-100 rounded-xl p-3 text-sm text-green-800';
+    el.textContent = '';
+    return;
+  }
+  el.innerHTML = '<div class="font-semibold mb-1">直前の登録内容</div><div>' + esc(lastSubmittedText) + '</div>';
+  el.className = 'mt-3 bg-green-50 border border-green-100 rounded-xl p-3 text-sm text-green-800';
+}
+
 document.addEventListener('input', function(e) {
   if (e.target && (e.target.id === 'entry-dora' || e.target.id === 'entry-winner')) updateEntryOptions();
 });
@@ -936,10 +967,12 @@ async function submitHand() {
     });
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || '登録に失敗しました');
+    lastSubmittedText = formatEntrySummary(payload);
     localStorage.removeItem(CACHE_KEY);
     showMessage(entryState.mode === 'update' ? '更新しました。最新データを読み込みます。' : '登録しました。最新データを読み込みます。', true);
     await fetchData(true);
     resetEntryForm(players);
+    renderLastSubmitted();
   } catch (e) {
     showMessage('登録に失敗しました: ' + e.message, false);
   } finally {
@@ -968,6 +1001,7 @@ function resetEntryForm(keepPlayersOverride) {
   }
   var message = document.getElementById('entry-message');
   if (message) message.className = 'mt-3 text-sm hidden';
+  renderLastSubmitted();
 }
 
 function findHandById(handId) {
