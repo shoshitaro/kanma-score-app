@@ -408,7 +408,7 @@ async function init() {
 // ══════════════════════════════════════════
 //  データ取得
 // ══════════════════════════════════════════
-async function fetchData(silent = false) {
+async function fetchData(silent = false, allowDefaultRetry = true) {
   if (!silent) showView('loading');
   setRefreshing(true);
   try {
@@ -422,7 +422,15 @@ async function fetchData(silent = false) {
     renderAll();
     if (!silent) goView('home');
   } catch(e) {
+    if (allowDefaultRetry && APP_URL !== DEFAULT_APP_URL) {
+      APP_URL = DEFAULT_APP_URL;
+      localStorage.setItem(URL_KEY, APP_URL);
+      await fetchData(silent, false);
+      return;
+    }
     if (!gData) {
+      var setupUrlEl = document.getElementById('setup-url');
+      if (setupUrlEl) setupUrlEl.value = APP_URL || DEFAULT_APP_URL;
       showNav(false);
       showView('setup');
       showSetupErr('データの取得に失敗しました: ' + e.message);
