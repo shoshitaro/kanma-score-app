@@ -368,8 +368,6 @@ let APP_URL = normalizeAppUrl(localStorage.getItem(URL_KEY) || DEFAULT_APP_URL);
 let gData   = null;  // { hands, sessions, players, totalHands }
 let lastEntryPlayers = [];
 let lastSubmittedText = '';
-let lastWinnerSelection = '';
-let lastHoujuuSelection = '';
 
 // ══════════════════════════════════════════
 //  初期化
@@ -842,15 +840,12 @@ function updateEntryOptions() {
   var players = selectedEntryPlayers();
   var winner = document.getElementById('entry-winner');
   var houjuu = document.getElementById('entry-houjuu');
-  var previousWinner = winner ? (winner.value || lastWinnerSelection) : lastWinnerSelection;
-  var previousHoujuu = houjuu ? (houjuu.value || lastHoujuuSelection) : lastHoujuuSelection;
+  var previousWinner = winner ? winner.value : '';
+  var previousHoujuu = houjuu ? houjuu.value : '';
 
   if (winner) {
-    winner.innerHTML = players.map(function(name){ return '<option value="' + esc(name) + '">' + esc(name) + '</option>'; }).join('');
-    if (players.includes(previousWinner)) {
-      winner.value = previousWinner;
-      lastWinnerSelection = previousWinner;
-    }
+    winner.innerHTML = '<option value="">-</option>' + players.map(function(name){ return '<option value="' + esc(name) + '">' + esc(name) + '</option>'; }).join('');
+    if (players.includes(previousWinner)) winner.value = previousWinner;
   }
 
   var isRon = entryState.role === 'ロン' || entryState.role === 'リーチロン';
@@ -859,11 +854,8 @@ function updateEntryOptions() {
   if (houjuu) {
     var winnerName = winner ? winner.value : '';
     var candidates = players.filter(function(name){ return name !== winnerName; });
-    houjuu.innerHTML = candidates.map(function(name){ return '<option value="' + esc(name) + '">' + esc(name) + '</option>'; }).join('');
-    if (candidates.includes(previousHoujuu)) {
-      houjuu.value = previousHoujuu;
-      lastHoujuuSelection = previousHoujuu;
-    }
+    houjuu.innerHTML = '<option value="">-</option>' + candidates.map(function(name){ return '<option value="' + esc(name) + '">' + esc(name) + '</option>'; }).join('');
+    if (candidates.includes(previousHoujuu)) houjuu.value = previousHoujuu;
   }
 
   updateEntryPreview();
@@ -885,8 +877,19 @@ function updateEntryPreview() {
   }
 
   var winner = document.getElementById('entry-winner').value;
+  if (!winner) {
+    msg.innerHTML = '<span class="text-red-600 font-semibold">上がった人を選んでください。</span>';
+    return;
+  }
   var dora = Number(document.getElementById('entry-dora').value || 0);
   var isRon = entryState.role === 'ロン' || entryState.role === 'リーチロン';
+  if (isRon) {
+    var houjuu = document.getElementById('entry-houjuu').value;
+    if (!houjuu) {
+      msg.innerHTML = '<span class="text-red-600 font-semibold">放銃者を選んでください。</span>';
+      return;
+    }
+  }
   var base = entryState.role === 'ロン' ? 6 : entryState.role === 'リーチロン' ? 8 : entryState.role === 'ツモ' ? 2 : 4;
   var perPerson = base + dora;
   var total = isRon ? perPerson : perPerson * (players.length - 1);
@@ -974,8 +977,14 @@ async function submitHand() {
     payload.role = entryState.role;
     payload.dora = Number(document.getElementById('entry-dora').value || 0);
     payload.houjuu = isRon ? document.getElementById('entry-houjuu').value : '';
-    lastWinnerSelection = payload.winner || lastWinnerSelection;
-    if (isRon) lastHoujuuSelection = payload.houjuu || lastHoujuuSelection;
+    if (!payload.winner) {
+      showMessage('上がった人を選んでください。', false);
+      return;
+    }
+    if (isRon && !payload.houjuu) {
+      showMessage('放銃者を選んでください。', false);
+      return;
+    }
   }
 
   submit.disabled = true;
@@ -1022,18 +1031,12 @@ function resetEntryForm(keepPlayersOverride, keepFormState) {
   }
   if (keepFormState) {
     if (entryState.result === '和了') {
-      if (document.getElementById('entry-winner') && keepFormState.winner) {
-        document.getElementById('entry-winner').value = keepFormState.winner;
-      }
+      if (document.getElementById('entry-winner')) document.getElementById('entry-winner').value = '';
       if (document.getElementById('entry-dora')) {
         document.getElementById('entry-dora').value = keepFormState.dora || '0';
       }
       updateEntryOptions();
-      if (document.getElementById('entry-houjuu') && keepFormState.houjuu) {
-        var houjuuEl = document.getElementById('entry-houjuu');
-        var exists = Array.from(houjuuEl.options).some(function(option) { return option.value === keepFormState.houjuu; });
-        if (exists) houjuuEl.value = keepFormState.houjuu;
-      }
+      if (document.getElementById('entry-houjuu')) document.getElementById('entry-houjuu').value = '';
     }
     updateEntryOptions();
   }
