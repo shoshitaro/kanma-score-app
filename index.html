@@ -880,7 +880,7 @@ function updateEntryPreview() {
   var base = entryState.role === 'ロン' ? 6 : entryState.role === 'リーチロン' ? 8 : entryState.role === 'ツモ' ? 2 : 4;
   var perPerson = base + dora;
   var total = isRon ? perPerson : perPerson * (players.length - 1);
-  msg.textContent = winner + ' / ' + entryState.role + ' / ドラ' + dora + ' / 上がり者 +' + total + '点';
+  msg.textContent = winner + ' / ' + entryState.role + ' / ドラ' + dora + ' / +' + total + '点';
 }
 
 document.addEventListener('input', function(e) {
