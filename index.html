@@ -914,6 +914,18 @@ function renderLastSubmitted() {
   el.className = 'mt-3 bg-green-50 border border-green-100 rounded-xl p-3 text-sm text-green-800';
 }
 
+function captureEntryFormState(players) {
+  return {
+    date: document.getElementById('entry-date') ? document.getElementById('entry-date').value : '',
+    participants: Array.isArray(players) ? players.slice() : selectedEntryPlayers(),
+    result: entryState.result,
+    role: entryState.role,
+    winner: document.getElementById('entry-winner') ? document.getElementById('entry-winner').value : '',
+    dora: document.getElementById('entry-dora') ? String(document.getElementById('entry-dora').value || '0') : '0',
+    houjuu: document.getElementById('entry-houjuu') ? document.getElementById('entry-houjuu').value : ''
+  };
+}
+
 document.addEventListener('input', function(e) {
   if (e.target && (e.target.id === 'entry-dora' || e.target.id === 'entry-winner')) updateEntryOptions();
 });
@@ -928,6 +940,7 @@ async function submitHand() {
   var players = selectedEntryPlayers();
   lastEntryPlayers = players.slice();
   var isRon = entryState.role === 'ロン' || entryState.role === 'リーチロン';
+  var formState = captureEntryFormState(players);
 
   function showMessage(text, ok) {
     message.textContent = text;
@@ -971,7 +984,7 @@ async function submitHand() {
     localStorage.removeItem(CACHE_KEY);
     showMessage(entryState.mode === 'update' ? '更新しました。最新データを読み込みます。' : '登録しました。最新データを読み込みます。', true);
     await fetchData(true);
-    resetEntryForm(players);
+    resetEntryForm(players, formState);
     renderLastSubmitted();
   } catch (e) {
     showMessage('登録に失敗しました: ' + e.message, false);
@@ -981,22 +994,37 @@ async function submitHand() {
   }
 }
 
-function resetEntryForm(keepPlayersOverride) {
+function resetEntryForm(keepPlayersOverride, keepFormState) {
   var keepPlayers = Array.isArray(keepPlayersOverride) ? keepPlayersOverride.slice() : selectedEntryPlayers();
   if (keepPlayers.length) lastEntryPlayers = keepPlayers.slice();
-  var keepDate = document.getElementById('entry-date') ? document.getElementById('entry-date').value : '';
+  var keepDate = keepFormState && keepFormState.date ? keepFormState.date : (document.getElementById('entry-date') ? document.getElementById('entry-date').value : '');
   entryState.mode = 'create';
   entryState.handId = '';
-  entryState.result = '和了';
-  entryState.role = 'ロン';
-  var doraEl = document.getElementById('entry-dora');
-  if (doraEl) doraEl.value = '0';
+  entryState.result = keepFormState && keepFormState.result ? keepFormState.result : '和了';
+  entryState.role = keepFormState && keepFormState.role ? keepFormState.role : 'ロン';
   renderEntry();
   if (keepDate && document.getElementById('entry-date')) document.getElementById('entry-date').value = keepDate;
   if (keepPlayers.length) {
     document.querySelectorAll('.entry-player').forEach(function(el) {
       el.checked = keepPlayers.includes(el.value);
     });
+    updateEntryOptions();
+  }
+  if (keepFormState) {
+    if (entryState.result === '和了') {
+      if (document.getElementById('entry-winner') && keepFormState.winner) {
+        document.getElementById('entry-winner').value = keepFormState.winner;
+      }
+      if (document.getElementById('entry-dora')) {
+        document.getElementById('entry-dora').value = keepFormState.dora || '0';
+      }
+      updateEntryOptions();
+      if (document.getElementById('entry-houjuu') && keepFormState.houjuu) {
+        var houjuuEl = document.getElementById('entry-houjuu');
+        var exists = Array.from(houjuuEl.options).some(function(option) { return option.value === keepFormState.houjuu; });
+        if (exists) houjuuEl.value = keepFormState.houjuu;
+      }
+    }
     updateEntryOptions();
   }
   var message = document.getElementById('entry-message');
