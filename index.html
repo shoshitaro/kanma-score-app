@@ -368,6 +368,8 @@ let APP_URL = normalizeAppUrl(localStorage.getItem(URL_KEY) || DEFAULT_APP_URL);
 let gData   = null;  // { hands, sessions, players, totalHands }
 let lastEntryPlayers = [];
 let lastSubmittedText = '';
+let lastWinnerSelection = '';
+let lastHoujuuSelection = '';
 
 // ══════════════════════════════════════════
 //  初期化
@@ -840,12 +842,15 @@ function updateEntryOptions() {
   var players = selectedEntryPlayers();
   var winner = document.getElementById('entry-winner');
   var houjuu = document.getElementById('entry-houjuu');
-  var previousWinner = winner ? winner.value : '';
-  var previousHoujuu = houjuu ? houjuu.value : '';
+  var previousWinner = winner ? (winner.value || lastWinnerSelection) : lastWinnerSelection;
+  var previousHoujuu = houjuu ? (houjuu.value || lastHoujuuSelection) : lastHoujuuSelection;
 
   if (winner) {
     winner.innerHTML = players.map(function(name){ return '<option value="' + esc(name) + '">' + esc(name) + '</option>'; }).join('');
-    if (players.includes(previousWinner)) winner.value = previousWinner;
+    if (players.includes(previousWinner)) {
+      winner.value = previousWinner;
+      lastWinnerSelection = previousWinner;
+    }
   }
 
   var isRon = entryState.role === 'ロン' || entryState.role === 'リーチロン';
@@ -855,7 +860,10 @@ function updateEntryOptions() {
     var winnerName = winner ? winner.value : '';
     var candidates = players.filter(function(name){ return name !== winnerName; });
     houjuu.innerHTML = candidates.map(function(name){ return '<option value="' + esc(name) + '">' + esc(name) + '</option>'; }).join('');
-    if (candidates.includes(previousHoujuu)) houjuu.value = previousHoujuu;
+    if (candidates.includes(previousHoujuu)) {
+      houjuu.value = previousHoujuu;
+      lastHoujuuSelection = previousHoujuu;
+    }
   }
 
   updateEntryPreview();
@@ -966,6 +974,8 @@ async function submitHand() {
     payload.role = entryState.role;
     payload.dora = Number(document.getElementById('entry-dora').value || 0);
     payload.houjuu = isRon ? document.getElementById('entry-houjuu').value : '';
+    lastWinnerSelection = payload.winner || lastWinnerSelection;
+    if (isRon) lastHoujuuSelection = payload.houjuu || lastHoujuuSelection;
   }
 
   submit.disabled = true;
