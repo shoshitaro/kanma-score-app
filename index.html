@@ -79,6 +79,34 @@
 <body>
 <div id="app">
 
+  <!-- 簡易ロック画面 -->
+  <div id="v-lock" class="view">
+    <div class="hd text-white px-5 py-6">
+      <div class="text-2xl font-black">韓麻スコア 🀄</div>
+      <div class="text-sm mt-1 opacity-80">閲覧用ロック</div>
+    </div>
+    <div class="card mt-3">
+      <div class="sec-title">ロックを解除</div>
+      <p class="text-sm text-gray-600 mb-4 leading-relaxed">
+        このアプリは簡易ロック中です。合言葉を入力すると開けます。
+      </p>
+      <label class="text-sm font-medium text-gray-700">合言葉</label>
+      <input id="lock-password" type="password"
+        placeholder="合言葉を入力"
+        class="w-full mt-1.5 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+      >
+      <label class="flex items-center gap-2 mt-3 text-sm text-gray-600">
+        <input id="lock-remember" type="checkbox">
+        <span>この端末では次回から省略する</span>
+      </label>
+      <div id="lock-err" class="text-red-600 text-sm mt-3 hidden"></div>
+      <button onclick="unlockApp()"
+        class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm transition-colors">
+        ロックを解除
+      </button>
+    </div>
+  </div>
+
   <!-- ローディング画面 -->
   <div id="v-loading" class="view active">
     <div class="hd text-white px-5 py-4">
@@ -312,6 +340,8 @@
 // ══════════════════════════════════════════
 const URL_KEY   = 'kanma_url_v2';
 const CACHE_KEY = 'kanma_cache_v2';
+const LOCK_KEY = 'kanma_simple_lock_ok_v1';
+const LOCK_PASSWORD = '59463';
 const DEFAULT_APP_URL = 'https://script.google.com/macros/s/AKfycbw-EQDb_wPSk31IHy27AjX7008K8C7xZxS4eVVv7LYn0aydOn4jl20pNkSFQMdgK85KRA/exec';
 const LEGACY_APP_URLS = [
   'https://script.google.com/macros/s/AKfycbzprWPxCGfWtIFD9BzFNDOH5MAIOSGwjGXQPwqNestsMAQ0WiXWbhah2wGNY0HfWV_b1A/exec',
@@ -332,6 +362,12 @@ let gData   = null;  // { hands, sessions, players, totalHands }
 //  初期化
 // ══════════════════════════════════════════
 async function init() {
+  if (!isUnlocked()) {
+    showNav(false);
+    showView('lock');
+    return;
+  }
+
   localStorage.setItem(URL_KEY, APP_URL);
   if (!APP_URL) {
     var setupUrlEl = document.getElementById('setup-url');
@@ -393,6 +429,34 @@ async function clearCache() {
   localStorage.removeItem(CACHE_KEY);
   gData = null;
   await fetchData(false);
+}
+
+function isUnlocked() {
+  return localStorage.getItem(LOCK_KEY) === '1' || sessionStorage.getItem(LOCK_KEY) === '1';
+}
+
+function showLockErr(msg) {
+  var el = document.getElementById('lock-err');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function unlockApp() {
+  var input = document.getElementById('lock-password');
+  var remember = document.getElementById('lock-remember');
+  var value = (input && input.value || '').trim();
+  if (value !== LOCK_PASSWORD) {
+    showLockErr('合言葉が違います。');
+    return;
+  }
+
+  sessionStorage.setItem(LOCK_KEY, '1');
+  if (remember && remember.checked) localStorage.setItem(LOCK_KEY, '1');
+  var err = document.getElementById('lock-err');
+  if (err) err.classList.add('hidden');
+  showView('loading');
+  init();
 }
 
 // ══════════════════════════════════════════
