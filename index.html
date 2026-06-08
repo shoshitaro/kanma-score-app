@@ -878,7 +878,7 @@ function updateEntryPreview() {
 
   var winner = document.getElementById('entry-winner').value;
   if (!winner) {
-    msg.innerHTML = '<span class="text-red-600 font-semibold">上がった人を選んでください。</span>';
+    msg.textContent = '';
     return;
   }
   var dora = Number(document.getElementById('entry-dora').value || 0);
@@ -886,7 +886,7 @@ function updateEntryPreview() {
   if (isRon) {
     var houjuu = document.getElementById('entry-houjuu').value;
     if (!houjuu) {
-      msg.innerHTML = '<span class="text-red-600 font-semibold">放銃者を選んでください。</span>';
+      msg.textContent = '';
       return;
     }
   }
